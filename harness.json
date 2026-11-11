@@ -1,5 +1,6 @@
 {
   "build": ["dotnet build HotPotato.sln -v q -p:ModInstallPath=F:/_System/Documents/Klei/OxygenNotIncluded/mods/local/HotPotato"],
   "required_mods": ["HotPotato.Local"],
-  "save": "05 all research.sav"
+  "save": "mod-test-HotPotato-01.sav",
+  "saves_dir": "saves"
 }
