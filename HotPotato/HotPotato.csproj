@@ -1,0 +1,139 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="Local.Build.props" Condition="Exists('Local.Build.props')" />
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+        <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+        <LangVersion>10.0</LangVersion>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+
+        <GameManagedPath Condition="'$(GameManagedPath)' == ''">$(ONI_GAME_MANAGED_PATH)</GameManagedPath>
+        <ModInstallPath Condition="'$(ModInstallPath)' == ''">$(ONI_MOD_INSTALL_PATH)</ModInstallPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Reference Include="0Harmony">
+            <HintPath>$(GameManagedPath)\0Harmony.dll</HintPath>
+        </Reference>
+        <Reference Include="Assembly-CSharp">
+            <HintPath>$(GameManagedPath)\Assembly-CSharp.dll</HintPath>
+        </Reference>
+        <Reference Include="Assembly-CSharp-firstpass">
+            <HintPath>$(GameManagedPath)\Assembly-CSharp-firstpass.dll</HintPath>
+        </Reference>
+        <Reference Include="System.Core">
+            <HintPath>$(GameManagedPath)\System.Core.dll</HintPath>
+        </Reference>
+        <Reference Include="Newtonsoft.Json">
+            <HintPath>$(GameManagedPath)\Newtonsoft.Json.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine">
+            <HintPath>$(GameManagedPath)\UnityEngine.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.CoreModule">
+            <HintPath>$(GameManagedPath)\UnityEngine.CoreModule.dll</HintPath>
+        </Reference>
+        <Reference Include="Unity.TextMeshPro">
+            <HintPath>$(GameManagedPath)\Unity.TextMeshPro.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.TextRenderingModule">
+            <HintPath>$(GameManagedPath)\UnityEngine.TextRenderingModule.dll</HintPath>
+        </Reference>
+        <Reference Include="FMODUnity">
+            <HintPath>$(GameManagedPath)\FMODUnity.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.UIModule">
+            <HintPath>$(GameManagedPath)\UnityEngine.UIModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.ImageConversionModule">
+            <HintPath>$(GameManagedPath)\UnityEngine.ImageConversionModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.UI">
+            <HintPath>$(GameManagedPath)\UnityEngine.UI.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.IMGUIModule">
+            <HintPath>$(GameManagedPath)\UnityEngine.IMGUIModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.InputLegacyModule">
+            <HintPath>$(GameManagedPath)\UnityEngine.InputLegacyModule.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ILRepack.MSBuild.Task" Version="2.0.13" PrivateAssets="all" />
+        <PackageReference Include="PLib" Version="4.25.0">
+            <CopyLocal>true</CopyLocal>
+            <IncludeAssets>all</IncludeAssets>
+            <PrivateAssets>none</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="mod_info.yaml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="mod.yaml">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <PropertyGroup>
+        <NoWarn>$(NoWarn);MSB3277</NoWarn>
+    </PropertyGroup>
+
+    <!-- Embeds PLib into the mod DLL. Input is the intermediate (obj) assembly so repeated incremental builds never merge twice. -->
+    <Target Name="MergeAssemblies" AfterTargets="PostBuildEvent" Condition="Exists('$(TargetDir)PLib.dll')">
+        <PropertyGroup>
+            <ILRepackExe>$(NuGetPackageRoot)ilrepack.msbuild.task\2.0.13\tools\ilrepack.exe</ILRepackExe>
+            <ILRepackDebugFlag Condition="'$(Configuration)' == 'Release'">/ndebug</ILRepackDebugFlag>
+        </PropertyGroup>
+        <Exec Command="&quot;$(ILRepackExe)&quot; /parallel $(ILRepackDebugFlag) /lib:&quot;$(GameManagedPath)&quot; /out:&quot;$(TargetPath)&quot; &quot;@(IntermediateAssembly->'%(FullPath)')&quot; &quot;$(TargetDir)PLib.dll&quot;" />
+    </Target>
+
+    <!-- No pdb in Release builds. -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <DebugType>none</DebugType>
+        <DebugSymbols>false</DebugSymbols>
+    </PropertyGroup>
+
+    <!-- Debug builds go to the local mods folder (ModInstallPath) for development. -->
+    <Target Name="PostBuild" AfterTargets="MergeAssemblies" Condition="'$(ModInstallPath)' != '' and '$(Configuration)' != 'Release'">
+        <MakeDir Directories="$(ModInstallPath)" />
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModInstallPath)" />
+        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModInstallPath)" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
+        <Copy SourceFiles="$(ProjectDir)mod_info.yaml" DestinationFolder="$(ModInstallPath)" Condition="Exists('$(ProjectDir)mod_info.yaml')" />
+        <ItemGroup>
+            <ModTranslationFiles Include="$(ProjectDir)translations\*.po" />
+        </ItemGroup>
+        <MakeDir Directories="$(ModInstallPath)\translations" Condition="'@(ModTranslationFiles)' != ''" />
+        <Copy SourceFiles="@(ModTranslationFiles)" DestinationFolder="$(ModInstallPath)\translations" Condition="'@(ModTranslationFiles)' != ''" />
+        <Copy SourceFiles="$(ProjectDir)mod.yaml" DestinationFolder="$(ModInstallPath)" Condition="Exists('$(ProjectDir)mod.yaml')" />
+        <ItemGroup>
+            <ModAssetFiles Include="$(ProjectDir)ModAssets\*.png" />
+        </ItemGroup>
+        <MakeDir Directories="$(ModInstallPath)\ModAssets" Condition="'@(ModAssetFiles)' != ''" />
+        <Copy SourceFiles="@(ModAssetFiles)" DestinationFolder="$(ModInstallPath)\ModAssets" Condition="'@(ModAssetFiles)' != ''" />
+    </Target>
+
+    <!-- Release builds produce a clean distribution folder: <repo>\release\HotPotato (git-ignored). -->
+    <Target Name="PackageRelease" AfterTargets="Build" DependsOnTargets="MergeAssemblies" Condition="'$(Configuration)' == 'Release'">
+        <PropertyGroup>
+            <ReleaseDir>$(ProjectDir)..\release\$(TargetName)</ReleaseDir>
+        </PropertyGroup>
+        <ItemGroup>
+            <ReleaseTranslationFiles Include="$(ProjectDir)translations\*.po" />
+            <ReleaseAssetFiles Include="$(ProjectDir)ModAssets\*.png" />
+        </ItemGroup>
+        <RemoveDir Directories="$(ReleaseDir)" />
+        <MakeDir Directories="$(ReleaseDir)" />
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ReleaseDir)" />
+        <Copy SourceFiles="$(ProjectDir)mod.yaml;$(ProjectDir)mod_info.yaml" DestinationFolder="$(ReleaseDir)" />
+        <Copy SourceFiles="$(ProjectDir)..\Workshop\preview.png" DestinationFolder="$(ReleaseDir)" Condition="Exists('$(ProjectDir)..\Workshop\preview.png')" />
+        <Copy SourceFiles="@(ReleaseTranslationFiles)" DestinationFolder="$(ReleaseDir)\translations" Condition="'@(ReleaseTranslationFiles)' != ''" />
+        <Copy SourceFiles="@(ReleaseAssetFiles)" DestinationFolder="$(ReleaseDir)\ModAssets" Condition="'@(ReleaseAssetFiles)' != ''" />
+    </Target>
+
+</Project>

@@ -1,0 +1,2 @@
+title: "Hot Potato"
+description: "Pauses the game and warns you when a Duplicant or an Auto-Sweeper picks up an item above (or below) a temperature threshold, instead of forbidding the pickup."
