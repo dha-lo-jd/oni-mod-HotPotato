@@ -12,6 +12,13 @@ public static class STRINGS
         public static LocString MESSAGE = "{0} picked up {1} ({2})";
     }
 
+    // The tool menu button. The checkbox labels reuse OPTIONS.PAUSE_GAME and OPTIONS.SHOW_NOTIFICATION.
+    public static class TOOL
+    {
+        public static LocString NAME = "Hot Potato Settings";
+        public static LocString TOOLTIP = "Turn the pickup temperature warnings on or off. The threshold and mode are in the mod options.";
+    }
+
     public static class OPTIONS
     {
         public static class MODE

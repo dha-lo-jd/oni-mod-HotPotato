@@ -7,7 +7,9 @@ using HarmonyLib;
 using HotPotato.Core;
 using HotPotato.Options;
 using HotPotato.Patches;
+using HotPotato.Tools;
 using Klei.AI;
+using PeterHan.PLib.Options;
 using UnityEngine;
 
 namespace HotPotato;
@@ -131,6 +133,53 @@ internal static class HarnessTests
             if (!wasPaused && speed.IsPaused) speed.Unpause(false);
             (options.Mode, options.ThresholdCelsius, options.PauseGame, options.ShowNotification) = saved;
         }
+    }
+
+    // The tool menu button opens the vanilla checkbox panel; clicking a checkbox changes the option and saves it.
+    [HarnessTest(Name = "hotpotato.settings_tool", Tags = "hotpotato")]
+    public static void SettingsToolToggles()
+    {
+        var controller = PlayerController.Instance;
+        var tool = controller.tools.OfType<SettingsTool>().FirstOrDefault();
+        Assert(tool != null, "the settings tool is not registered on the PlayerController");
+        Assert(ToolMenu.Instance.basicTools.Any(c => c.tools.Count > 0 && c.tools[0].toolName == SettingsTool.ToolName),
+            "the tool menu has no Hot Potato button");
+
+        var options = ModOptions.Instance;
+        var saved = (options.PauseGame, options.ShowNotification);
+        options.PauseGame = true;
+        options.ShowNotification = true;
+        try
+        {
+            controller.ActivateTool(tool);
+            var toggles = ToolMenu.Instance.toolParameterMenu.widgetContainer.GetComponentsInChildren<MultiToggle>()
+                .Where(t => t.gameObject.activeInHierarchy).ToArray();
+            Assert(toggles.Length == 2, "expected 2 checkboxes in the panel, found " + toggles.Length);
+
+            toggles[0].onClick();
+            Assert(!options.PauseGame && options.ShowNotification, "first checkbox did not turn off PauseGame only");
+            toggles[0].onClick();
+            Assert(options.PauseGame, "first checkbox did not turn PauseGame back on");
+
+            toggles[1].onClick();
+            Assert(options.PauseGame && !options.ShowNotification, "second checkbox did not turn off ShowNotification only");
+            toggles[1].onClick();
+            Assert(options.ShowNotification, "second checkbox did not turn ShowNotification back on");
+        }
+        finally
+        {
+            controller.ActivateTool(SelectTool.Instance);
+            (options.PauseGame, options.ShowNotification) = saved;
+            // The checkboxes saved the options on every click; leave the file as it was.
+            POptions.WriteSettings(options);
+        }
+    }
+
+    // Not a test: lets the harness (/invoke) open the panel so a screenshot can show it.
+    public static void ShowSettingsPanel()
+    {
+        var tool = PlayerController.Instance.tools.OfType<SettingsTool>().First();
+        PlayerController.Instance.ActivateTool(tool);
     }
 
     private static GameObject SpawnIgneous(float kelvin)

@@ -20,4 +20,5 @@ Requires a local ONI install (real game assemblies; there is no stub mode).
 ## Code layout
 
 - `HotPotatoMod.cs`: `UserMod2` entry point; applies all Harmony patches and loads translations.
+- `Tools/SettingsTool.cs` + `Patches/ToolPatches.cs`: a tool menu button (no hotkey) whose tool does nothing on the map and shows the vanilla `ToolParameterMenu` checkboxes for `PauseGame` / `ShowNotification`; changes are written back through `POptions.WriteSettings`. Threshold and mode stay in the mod options.
 - File-scoped namespaces, no implicit usings, nullable disabled.
