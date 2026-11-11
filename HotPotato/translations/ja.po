@@ -11,3 +11,71 @@ msgstr ""
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
+
+msgctxt "HotPotato.STRINGS.NOTIFICATION.TITLE"
+msgid "Handle with care!"
+msgstr "取扱注意！"
+
+msgctxt "HotPotato.STRINGS.NOTIFICATION.TOOLTIP"
+msgid "These items were picked up outside the temperature range set in Hot Potato:"
+msgstr "Hot Potato で設定した温度の範囲外のアイテムが拾われました:"
+
+msgctxt "HotPotato.STRINGS.NOTIFICATION.MESSAGE"
+msgid "{0} picked up {1} ({2})"
+msgstr "{0} が {1} を拾いました（{2}）"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.MODE.NAME"
+msgid "Warn when temperature is"
+msgstr "警告する温度"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.MODE.TOOLTIP"
+msgid "Warn when a picked-up item is above or below the threshold, like a Thermo Sensor."
+msgstr "拾われたアイテムの温度がしきい値を超えたとき、または下回ったときに警告します（温度センサーと同じ考え方です）"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.MODE.ABOVE"
+msgid "Above threshold"
+msgstr "しきい値を超過"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.MODE.ABOVE_TOOLTIP"
+msgid "Warn about items hotter than the threshold."
+msgstr "しきい値より熱いアイテムを警告します"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.MODE.BELOW"
+msgid "Below threshold"
+msgstr "しきい値を下回る"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.MODE.BELOW_TOOLTIP"
+msgid "Warn about items colder than the threshold."
+msgstr "しきい値より冷たいアイテムを警告します"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.THRESHOLD.NAME"
+msgid "Threshold (°C)"
+msgstr "しきい値（℃）"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.THRESHOLD.TOOLTIP"
+msgid "Temperature that triggers the warning. Cooking stations output food at 95 °C and the Kiln at 80 °C, so an \"above\" threshold below those warns about every meal or brick."
+msgstr "警告の基準になる温度です。調理設備の料理は 95℃、窯の生産物は 80℃ で出てくるため、「超過」でそれより低い値にすると、料理やレンガを運ぶたびに警告が出ます"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.PAUSE_GAME.NAME"
+msgid "Pause the game"
+msgstr "ゲームを一時停止"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.PAUSE_GAME.TOOLTIP"
+msgid "Pause the game when such an item is picked up."
+msgstr "範囲外の温度のアイテムが拾われたら、ゲームを一時停止します"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.SHOW_NOTIFICATION.NAME"
+msgid "Show a notification"
+msgstr "通知を表示"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.SHOW_NOTIFICATION.TOOLTIP"
+msgid "Show a notification naming the carrier, the item and its temperature. Click it to focus the carrier."
+msgstr "拾った者、アイテム、温度を通知で表示します。クリックすると、拾った者にカメラが移動します"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.INCLUDE_AUTO_SWEEPERS.NAME"
+msgid "Include Auto-Sweepers"
+msgstr "自動スイーパーも対象にする"
+
+msgctxt "HotPotato.STRINGS.OPTIONS.INCLUDE_AUTO_SWEEPERS.TOOLTIP"
+msgid "Also warn when an Auto-Sweeper picks up such an item."
+msgstr "自動スイーパーが範囲外の温度のアイテムを拾った場合も警告します"

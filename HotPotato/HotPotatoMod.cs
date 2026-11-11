@@ -1,7 +1,9 @@
 using System.IO;
 using HarmonyLib;
 using KMod;
+using HotPotato.Options;
 using PeterHan.PLib.Core;
+using PeterHan.PLib.Options;
 using UnityEngine;
 
 namespace HotPotato;
@@ -15,6 +17,7 @@ public sealed class HotPotatoMod : UserMod2
         base.OnLoad(harmony);
         modPath = path;
         PUtil.InitLibrary(false);
+        new POptions().RegisterOptions(this, typeof(ModOptions));
     }
 
     // Registers the strings and overloads them with translations/<language code>.po of the selected language.
