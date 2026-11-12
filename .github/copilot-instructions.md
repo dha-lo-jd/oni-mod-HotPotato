@@ -20,5 +20,6 @@ Requires a local ONI install (real game assemblies; there is no stub mode).
 ## Code layout
 
 - `HotPotatoMod.cs`: `UserMod2` entry point; applies all Harmony patches and loads translations.
-- `Tools/SettingsTool.cs` + `Patches/ToolPatches.cs`: a tool menu button (no hotkey) whose tool does nothing on the map and shows the vanilla `ToolParameterMenu` checkboxes for `PauseGame` / `ShowNotification`; changes are written back through `POptions.WriteSettings`. Threshold and mode stay in the mod options.
+- Settings are edited only in game; there is no mod options screen. `Options/ModOptions.cs` is just the saved state (`config.json` in the mod folder, via PLib `SingletonOptions`): two independent watches (`WarnAbove`/`AboveCelsius`, `WarnBelow`/`BelowCelsius`) plus the shared `PauseGame`, `ShowNotification`, `IncludeAutoSweepers`.
+- `Tools/SettingsTool.cs` + `Patches/ToolPatches.cs`: a tool menu button (no hotkey) whose tool does nothing on the map and shows `Ui/SettingsPanel.cs`, a PLib UI panel docked like the vanilla tool filter panel. Every control writes `ModOptions` and saves it at once (temperature fields commit on Enter / focus loss).
 - File-scoped namespaces, no implicit usings, nullable disabled.

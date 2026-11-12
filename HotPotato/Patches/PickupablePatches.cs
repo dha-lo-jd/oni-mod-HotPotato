@@ -57,7 +57,7 @@ internal static class PickupableOnCompleteWorkPatch
         }
 
         var element = pickupable.GetComponent<PrimaryElement>();
-        if (element == null || !TemperatureRule.IsOutOfRange(element.Temperature, options.Mode, options.ThresholdCelsius))
+        if (element == null || !TemperatureRule.IsOutOfRange(element.Temperature, options))
         {
             return null;
         }

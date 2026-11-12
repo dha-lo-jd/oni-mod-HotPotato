@@ -12,29 +12,28 @@ public static class STRINGS
         public static LocString MESSAGE = "{0} picked up {1} ({2})";
     }
 
-    // The tool menu button. The checkbox labels reuse OPTIONS.PAUSE_GAME and OPTIONS.SHOW_NOTIFICATION.
+    // The tool menu button. Its name is also the title of the settings panel.
     public static class TOOL
     {
         public static LocString NAME = "Hot Potato Settings";
-        public static LocString TOOLTIP = "Turn the pickup temperature warnings on or off. The threshold and mode are in the mod options.";
+        public static LocString TOOLTIP = "Change the pickup temperature warnings.";
     }
 
-    public static class OPTIONS
+    public static class PANEL
     {
-        public static class MODE
+        public static LocString UNIT = "°C";
+        public static LocString THRESHOLD_TOOLTIP = "Temperature in °C. Press Enter or click elsewhere to apply.";
+
+        public static class WARN_ABOVE
         {
-            public static LocString NAME = "Warn when temperature is";
-            public static LocString TOOLTIP = "Warn when a picked-up item is above or below the threshold, like a Thermo Sensor.";
-            public static LocString ABOVE = "Above threshold";
-            public static LocString ABOVE_TOOLTIP = "Warn about items hotter than the threshold.";
-            public static LocString BELOW = "Below threshold";
-            public static LocString BELOW_TOOLTIP = "Warn about items colder than the threshold.";
+            public static LocString NAME = "Warn above";
+            public static LocString TOOLTIP = "Warn when a picked-up item is hotter than this temperature. Cooking stations output food at 95 °C and the Kiln at 80 °C, so a value below those warns about every meal or brick.";
         }
 
-        public static class THRESHOLD
+        public static class WARN_BELOW
         {
-            public static LocString NAME = "Threshold (°C)";
-            public static LocString TOOLTIP = "Temperature that triggers the warning. Cooking stations output food at 95 °C and the Kiln at 80 °C, so an \"above\" threshold below those warns about every meal or brick.";
+            public static LocString NAME = "Warn below";
+            public static LocString TOOLTIP = "Warn when a picked-up item is colder than this temperature.";
         }
 
         public static class PAUSE_GAME

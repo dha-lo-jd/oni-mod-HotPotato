@@ -8,6 +8,7 @@ using HotPotato.Core;
 using HotPotato.Options;
 using HotPotato.Patches;
 using HotPotato.Tools;
+using HotPotato.Ui;
 using Klei.AI;
 using PeterHan.PLib.Options;
 using UnityEngine;
@@ -35,13 +36,29 @@ internal static class HarnessTests
     [HarnessTest(Name = "hotpotato.rule_thresholds", Tags = "hotpotato", RequiresGame = false)]
     public static void RuleThresholds()
     {
-        var threshold = ModOptions.DefaultThresholdCelsius;
-        var atThreshold = threshold + 273.15f;
-        Assert(!TemperatureRule.IsOutOfRange(atThreshold, ThresholdMode.Above, threshold), "above: equal must not warn");
-        Assert(TemperatureRule.IsOutOfRange(atThreshold + 0.1f, ThresholdMode.Above, threshold), "above: hotter must warn");
-        Assert(!TemperatureRule.IsOutOfRange(95f + 273.15f, ThresholdMode.Above, threshold), "above: cooked food (95 C) must not warn by default");
-        Assert(!TemperatureRule.IsOutOfRange(atThreshold, ThresholdMode.Below, threshold), "below: equal must not warn");
-        Assert(TemperatureRule.IsOutOfRange(atThreshold - 0.1f, ThresholdMode.Below, threshold), "below: colder must warn");
+        // A fresh instance: the defaults, not whatever is saved in config.json.
+        var options = new ModOptions();
+        var above = ModOptions.DefaultAboveCelsius + 273.15f;
+        var below = ModOptions.DefaultBelowCelsius + 273.15f;
+
+        // Defaults: only the "above" watch is on.
+        Assert(!TemperatureRule.IsOutOfRange(above, options), "above: equal must not warn");
+        Assert(TemperatureRule.IsOutOfRange(above + 0.1f, options), "above: hotter must warn");
+        Assert(!TemperatureRule.IsOutOfRange(95f + 273.15f, options), "above: cooked food (95 C) must not warn by default");
+        Assert(!TemperatureRule.IsOutOfRange(below - 50f, options), "below: must not warn while that watch is off");
+
+        // Both watches on, with their own thresholds.
+        options.WarnBelow = true;
+        options.BelowCelsius = -10f;
+        Assert(!TemperatureRule.IsOutOfRange(-10f + 273.15f, options), "below: equal must not warn");
+        Assert(TemperatureRule.IsOutOfRange(-10.1f + 273.15f, options), "below: colder must warn");
+        Assert(!TemperatureRule.IsOutOfRange(20f + 273.15f, options), "room temperature must not warn");
+        Assert(TemperatureRule.IsOutOfRange(above + 0.1f, options), "above: still warns with both on");
+
+        // The "above" watch off: only the cold side is left.
+        options.WarnAbove = false;
+        Assert(!TemperatureRule.IsOutOfRange(above + 100f, options), "above: must not warn while that watch is off");
+        Assert(TemperatureRule.IsOutOfRange(-20f + 273.15f, options), "below: still warns with only that watch on");
     }
 
     [HarnessTest(Name = "hotpotato.patch_applied", Tags = "hotpotato", RequiresGame = false)]
@@ -58,11 +75,8 @@ internal static class HarnessTests
     public static void PickupWarns()
     {
         var options = ModOptions.Instance;
-        var saved = (options.Mode, options.ThresholdCelsius, options.PauseGame, options.ShowNotification);
-        options.Mode = ThresholdMode.Above;
-        options.ThresholdCelsius = ModOptions.DefaultThresholdCelsius;
-        options.PauseGame = false;
-        options.ShowNotification = true;
+        var saved = Capture(options);
+        Configure(options, above: true, below: false, pause: false, notify: true);
 
         var worker = TestWorker.Create("HotPotato test worker");
         GameObject hot = null, cool = null;
@@ -88,8 +102,66 @@ internal static class HarnessTests
         {
             RemoveLastNotification();
             Cleanup(worker, hot, cool);
-            (options.Mode, options.ThresholdCelsius, options.PauseGame, options.ShowNotification) = saved;
+            Restore(options, saved);
         }
+    }
+
+    // The two watches are independent: a cold item warns only while "below" is on, a hot one only while "above" is on.
+    [HarnessTest(Name = "hotpotato.pickup_watches", Tags = "hotpotato")]
+    public static void PickupWatches()
+    {
+        var options = ModOptions.Instance;
+        var saved = Capture(options);
+        var coldKelvin = -50f + 273.15f;
+        var worker = TestWorker.Create("HotPotato test worker");
+        var spawned = new System.Collections.Generic.List<GameObject>();
+        try
+        {
+            Configure(options, above: false, below: true, pause: false, notify: false);
+            options.BelowCelsius = 0f;
+            Assert(Raises(worker, spawned, coldKelvin), "cold item did not warn with the below watch on");
+            Assert(!Raises(worker, spawned, HotKelvin), "hot item warned with the above watch off");
+
+            options.WarnBelow = false;
+            Assert(!Raises(worker, spawned, coldKelvin), "cold item warned with the below watch off");
+
+            options.WarnAbove = true;
+            Assert(Raises(worker, spawned, HotKelvin), "hot item did not warn with the above watch on");
+            Assert(!Raises(worker, spawned, coldKelvin), "cold item warned with only the above watch on");
+        }
+        finally
+        {
+            Cleanup(worker, spawned.ToArray());
+            Restore(options, saved);
+        }
+    }
+
+    // True when picking up an item of this temperature raised an alert.
+    private static bool Raises(TestWorker worker, System.Collections.Generic.List<GameObject> spawned, float kelvin)
+    {
+        var before = PickupAlert.RaisedCount;
+        var item = SpawnIgneous(kelvin);
+        spawned.Add(item);
+        Pickup(worker, item);
+        return PickupAlert.RaisedCount > before;
+    }
+
+    private static (bool, float, bool, float, bool, bool, bool) Capture(ModOptions o) =>
+        (o.WarnAbove, o.AboveCelsius, o.WarnBelow, o.BelowCelsius, o.PauseGame, o.ShowNotification, o.IncludeAutoSweepers);
+
+    private static void Restore(ModOptions o, (bool, float, bool, float, bool, bool, bool) s) =>
+        (o.WarnAbove, o.AboveCelsius, o.WarnBelow, o.BelowCelsius, o.PauseGame, o.ShowNotification, o.IncludeAutoSweepers) = s;
+
+    // Default thresholds, auto-sweepers included.
+    private static void Configure(ModOptions o, bool above, bool below, bool pause, bool notify)
+    {
+        o.WarnAbove = above;
+        o.AboveCelsius = ModOptions.DefaultAboveCelsius;
+        o.WarnBelow = below;
+        o.BelowCelsius = ModOptions.DefaultBelowCelsius;
+        o.PauseGame = pause;
+        o.ShowNotification = notify;
+        o.IncludeAutoSweepers = true;
     }
 
     // Pausing must happen once: pausing an already paused game would need two presses to resume.
@@ -97,11 +169,8 @@ internal static class HarnessTests
     public static void PauseOnce()
     {
         var options = ModOptions.Instance;
-        var saved = (options.Mode, options.ThresholdCelsius, options.PauseGame, options.ShowNotification);
-        options.Mode = ThresholdMode.Above;
-        options.ThresholdCelsius = ModOptions.DefaultThresholdCelsius;
-        options.PauseGame = true;
-        options.ShowNotification = false;
+        var saved = Capture(options);
+        Configure(options, above: true, below: false, pause: true, notify: false);
 
         var speed = SpeedControlScreen.Instance;
         var pauseCount = Traverse.Create(speed).Field<int>("pauseCount");
@@ -131,13 +200,13 @@ internal static class HarnessTests
             // Leave the pause state as the harness had it.
             if (wasPaused && !speed.IsPaused) speed.Pause(false);
             if (!wasPaused && speed.IsPaused) speed.Unpause(false);
-            (options.Mode, options.ThresholdCelsius, options.PauseGame, options.ShowNotification) = saved;
+            Restore(options, saved);
         }
     }
 
-    // The tool menu button opens the vanilla checkbox panel; clicking a checkbox changes the option and saves it.
-    [HarnessTest(Name = "hotpotato.settings_tool", Tags = "hotpotato")]
-    public static void SettingsToolToggles()
+    // The tool menu button opens the settings panel; every control changes its option at once.
+    [HarnessTest(Name = "hotpotato.settings_panel", Tags = "hotpotato")]
+    public static void SettingsPanelEdits()
     {
         var controller = PlayerController.Instance;
         var tool = controller.tools.OfType<SettingsTool>().FirstOrDefault();
@@ -146,33 +215,69 @@ internal static class HarnessTests
             "the tool menu has no Hot Potato button");
 
         var options = ModOptions.Instance;
-        var saved = (options.PauseGame, options.ShowNotification);
-        options.PauseGame = true;
-        options.ShowNotification = true;
+        var saved = Capture(options);
+        Configure(options, above: true, below: false, pause: true, notify: true);
         try
         {
             controller.ActivateTool(tool);
-            var toggles = ToolMenu.Instance.toolParameterMenu.widgetContainer.GetComponentsInChildren<MultiToggle>()
-                .Where(t => t.gameObject.activeInHierarchy).ToArray();
-            Assert(toggles.Length == 2, "expected 2 checkboxes in the panel, found " + toggles.Length);
+            var panel = SettingsPanel.Root;
+            Assert(panel != null && panel.activeInHierarchy, "the settings panel is not shown");
 
-            toggles[0].onClick();
-            Assert(!options.PauseGame && options.ShowNotification, "first checkbox did not turn off PauseGame only");
-            toggles[0].onClick();
-            Assert(options.PauseGame, "first checkbox did not turn PauseGame back on");
+            // Hierarchy order: above, below, pause, notification, auto-sweepers.
+            var boxes = panel.GetComponentsInChildren<MultiToggle>().ToArray();
+            Assert(boxes.Length == 5, "expected 5 checkboxes in the panel, found " + boxes.Length);
+            boxes[0].onClick();
+            Assert(!options.WarnAbove, "checkbox 1 did not turn the above watch off");
+            boxes[0].onClick();
+            Assert(options.WarnAbove, "checkbox 1 did not turn the above watch back on");
+            boxes[1].onClick();
+            Assert(options.WarnBelow, "checkbox 2 did not turn the below watch on");
+            boxes[2].onClick();
+            Assert(!options.PauseGame, "checkbox 3 did not turn pausing off");
+            boxes[3].onClick();
+            Assert(!options.ShowNotification, "checkbox 4 did not turn the notification off");
+            boxes[4].onClick();
+            Assert(!options.IncludeAutoSweepers, "checkbox 5 did not turn auto-sweepers off");
 
-            toggles[1].onClick();
-            Assert(options.PauseGame && !options.ShowNotification, "second checkbox did not turn off ShowNotification only");
-            toggles[1].onClick();
-            Assert(options.ShowNotification, "second checkbox did not turn ShowNotification back on");
+            // The two thresholds are separate fields.
+            var fields = panel.GetComponentsInChildren<TMPro.TMP_InputField>().ToArray();
+            Assert(fields.Length == 2, "expected 2 temperature fields in the panel, found " + fields.Length);
+            Commit(fields[0], "123.5");
+            Assert(Mathf.Abs(options.AboveCelsius - 123.5f) < 0.001f && options.BelowCelsius == ModOptions.DefaultBelowCelsius,
+                "the first field did not set only the above threshold");
+            Commit(fields[1], "-20");
+            Assert(Mathf.Abs(options.BelowCelsius + 20f) < 0.001f && Mathf.Abs(options.AboveCelsius - 123.5f) < 0.001f,
+                "the second field did not set only the below threshold");
+
+            // Unusable input keeps the old value and puts it back in the field; huge values are clamped.
+            Commit(fields[0], "abc");
+            Assert(Mathf.Abs(options.AboveCelsius - 123.5f) < 0.001f && fields[0].text == "123.5",
+                "invalid input changed the threshold or left the field showing it (" + fields[0].text + ")");
+            Commit(fields[0], "99999");
+            Assert(options.AboveCelsius == 10000f, "a huge value was not clamped: " + options.AboveCelsius);
+
+            // Reopening shows the current options again.
+            controller.ActivateTool(SelectTool.Instance);
+            Assert(!panel.activeInHierarchy, "the panel stayed visible after leaving the tool");
+            options.WarnBelow = false;
+            options.BelowCelsius = 5f;
+            controller.ActivateTool(tool);
+            Assert(fields[1].text == "5", "reopened panel shows " + fields[1].text + " instead of the current below threshold");
         }
         finally
         {
             controller.ActivateTool(SelectTool.Instance);
-            (options.PauseGame, options.ShowNotification) = saved;
-            // The checkboxes saved the options on every click; leave the file as it was.
+            Restore(options, saved);
+            // The controls saved the options on every change; leave the file as it was.
             POptions.WriteSettings(options);
         }
+    }
+
+    // Typing a value and leaving the field, as the player does.
+    private static void Commit(TMPro.TMP_InputField field, string text)
+    {
+        field.text = text;
+        field.onEndEdit.Invoke(text);
     }
 
     // Not a test: lets the harness (/invoke) open the panel so a screenshot can show it.
