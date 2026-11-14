@@ -206,7 +206,7 @@ internal static class HarnessTests
 
     // The tool menu button opens the settings panel; every control changes its option at once.
     [HarnessTest(Name = "hotpotato.settings_panel", Tags = "hotpotato")]
-    public static void SettingsPanelEdits()
+    public static System.Collections.IEnumerator SettingsPanelEdits()
     {
         var controller = PlayerController.Instance;
         var tool = controller.tools.OfType<SettingsTool>().FirstOrDefault();
@@ -222,6 +222,9 @@ internal static class HarnessTests
             controller.ActivateTool(tool);
             var panel = SettingsPanel.Root;
             Assert(panel != null && panel.activeInHierarchy, "the settings panel is not shown");
+
+            // The panel's controls start listening when they spawn, a frame after they are shown (seen on U60; it did not need the wait before).
+            yield return null;
 
             // Hierarchy order: above, below, pause, notification, auto-sweepers.
             var boxes = panel.GetComponentsInChildren<MultiToggle>().ToArray();
@@ -244,7 +247,7 @@ internal static class HarnessTests
             Assert(fields.Length == 2, "expected 2 temperature fields in the panel, found " + fields.Length);
             Commit(fields[0], "123.5");
             Assert(Mathf.Abs(options.AboveCelsius - 123.5f) < 0.001f && options.BelowCelsius == ModOptions.DefaultBelowCelsius,
-                "the first field did not set only the above threshold");
+                "the first field did not set only the above threshold (above " + options.AboveCelsius + ", below " + options.BelowCelsius + ", default below " + ModOptions.DefaultBelowCelsius + ")");
             Commit(fields[1], "-20");
             Assert(Mathf.Abs(options.BelowCelsius + 20f) < 0.001f && Mathf.Abs(options.AboveCelsius - 123.5f) < 0.001f,
                 "the second field did not set only the below threshold");
